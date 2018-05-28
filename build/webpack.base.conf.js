@@ -40,17 +40,11 @@ module.exports = {
         test: /\.js$/,
         loader: 'babel-loader',
         include: [resolve('src'), resolve('test'), resolve('node_modules/webpack-dev-server/client')]
-      },{
-        test: /\.css$/,
-        use: ExtractTextPlugin.extract({
-          use: ['css-loader?minimize', 'autoprefixer-loader'],
-          fallback: 'style-loader'
-        })
       },
       {
         test: /\.less$/,
         use: ExtractTextPlugin.extract({
-          use: ['css-loader?minimize','autoprefixer-loader', 'less-loader'],
+          use: ['css-loader?minimize','postcss-loader', 'less-loader'],
           fallback: 'style-loader'
         }),
       },

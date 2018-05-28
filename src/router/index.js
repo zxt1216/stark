@@ -19,7 +19,6 @@ router.beforeEach((to,from,next)=>{
   //前序拦截
   //设置页面title
   //检验cookie并导航
-  console.log("_________OUT__________"+to.name);
   if(to.name==='login'){
     console.log("next()");
     next();
