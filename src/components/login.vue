@@ -3,80 +3,113 @@
 </style>
 
 <template>
-  <div class="login" @keydown.enter="handleSubmit">
+  <div class="login" @keydown.enter="handle">
     <div class="login-con">
       <Card :bordered="false">
         <p slot="title">
           <Icon type="log-in"></Icon>
-          欢迎登录
+          <span>欢迎登录</span>
         </p>
         <div class="form-con">
           <Form ref="loginForm" :model="form" :rules="rules">
-            <FormItem prop="userName">
-              <Input v-model="form.userName" placeholder="请输入用户名">
-              <span slot="prepend">
-                                    <Icon :size="16" type="person"></Icon>
-                                </span>
+            <FormItem prop="username">
+              <Input v-model="form.username" placeholder="请输入用户名">
+                <span slot="prepend">
+                  <Icon :size="16" type="person"></Icon>
+                </span>
               </Input>
             </FormItem>
-            <FormItem prop="password">
+            <FormItem prop="password" :error="form.error">
               <Input type="password" v-model="form.password" placeholder="请输入密码">
-              <span slot="prepend">
-                                    <Icon :size="14" type="locked"></Icon>
-                                </span>
+                <span slot="prepend">
+                  <Icon :size="16" type="locked"></Icon>
+                </span>
               </Input>
+              <Row>
+                <Col span="8" offset="1"><Checkbox v-model="form.remember">记住密码</Checkbox></Col>
+                <Col span="6" offset="9"><a>忘记密码</a></Col>
+              </Row>
             </FormItem>
             <FormItem>
-              <Button @click="handleSubmit" type="primary" long>登录</Button>
+              <Button @click="handle" type="primary" long>登陆</Button>
             </FormItem>
           </Form>
-          <p class="login-tip">输入任意用户名和密码即可</p>
         </div>
       </Card>
+      <!--<Row>-->
+        <!--<Col span="6" offset="18"><a>注册新用户</a></Col>-->
+      <!--</Row>-->
     </div>
   </div>
 </template>
 
 <script>
-  import Cookies from 'js-cookie';
+  import cookie from 'js-cookie';
+  import md5 from 'js-md5';
+  import axios from 'axios';
   export default {
-    data () {
+    data() {
       return {
         form: {
-          userName: 'iview_admin',
-          password: ''
+          username: cookie.get("username"),
+          password: cookie.get("password"),
+          //是否记住密码
+          remember:cookie.get("password")!==undefined,
+          error:''
         },
         rules: {
-          userName: [
-            { required: true, message: '账号不能为空', trigger: 'blur' }
+          username: [
+            {required: true, message: '账号不能为空', trigger: 'blur'}
           ],
           password: [
-            { required: true, message: '密码不能为空', trigger: 'blur' }
+            {required: true, message: '密码不能为空', trigger: 'blur'}
           ]
         }
       };
     },
     methods: {
-      handleSubmit () {
-        console.log(__dirname);
+      handle() {
         this.$refs.loginForm.validate((valid) => {
           if (valid) {
-            Cookies.set('user', this.form.userName);
-            Cookies.set('password', this.form.password);
-            this.$store.commit('setAvator', 'https://ss1.bdstatic.com/70cFvXSh_Q1YnxGkpoWK1HF6hhy/it/u=3448484253,3685836170&fm=27&gp=0.jpg');
-            if (this.form.userName === 'iview_admin') {
-              Cookies.set('access', 0);
-            } else {
-              Cookies.set('access', 1);
+            this.form.error='';
+            cookie.set("username", this.form.username);
+            if(cookie.get("password")===undefined){//cookie中没有密码,加密存储
+              this.form.password=md5(this.form.password);
+              if(this.form.remember){
+                cookie.set("password", this.form.password, {expires: 15});
+              }
+            }else {//cookie中含有密码
+              if(this.form.password.length===32){//MD5为32位,特殊处理一下
+                if(this.form.password===cookie.get("password")){
+                  if (this.form.remember) {
+                    cookie.set("password", this.form.password, {expires: 15});
+                  }else{
+                    cookie.remove("password");
+                  }
+                }else{
+                  cookie.remove("password");
+                  this.form.password='';
+                  this.form.error="用户名或密码不正确";
+                  return;
+                }
+              }else{//不是32位说明不是回显的密码,直接加密后台
+                this.form.password=md5(this.form.password);
+                if (this.form.remember) {
+                  cookie.set("password", this.form.password, {expires: 15});
+                }else{
+                  cookie.remove("password");
+                }
+              }
             }
+            //登陆后台
             this.$router.push({
-              name: 'home_index'
+              name: 'main'
             });
           }
         });
       }
     }
-  };
+  }
 </script>
 
 <style>
