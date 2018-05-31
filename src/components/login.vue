@@ -44,17 +44,18 @@
 </template>
 
 <script>
+  import { Message } from 'iview'
   import cookie from 'js-cookie';
   import md5 from 'js-md5';
-  import axios from 'axios';
+  import util from '../utils/util';
   export default {
     data() {
       return {
         form: {
-          username: cookie.get("username"),
-          password: cookie.get("password"),
+          username: window.localStorage.getItem('username'),
+          password: cookie.get('password'),
           //是否记住密码
-          remember:cookie.get("password")!==undefined,
+          remember:cookie.get('password')!==undefined,
           error:''
         },
         rules: {
@@ -72,38 +73,53 @@
         this.$refs.loginForm.validate((valid) => {
           if (valid) {
             this.form.error='';
-            cookie.set("username", this.form.username);
-            if(cookie.get("password")===undefined){//cookie中没有密码,加密存储
-              this.form.password=md5(this.form.password);
+            window.localStorage.setItem('username',this.form.username);
+            if(cookie.get('password')===undefined){//cookie中没有密码,加密存储
+              this.form.password=md5(this.form.password).toUpperCase();
               if(this.form.remember){
-                cookie.set("password", this.form.password, {expires: 15});
+                cookie.set('password', this.form.password, {expires: 15});
               }
             }else {//cookie中含有密码
               if(this.form.password.length===32){//MD5为32位,特殊处理一下
-                if(this.form.password===cookie.get("password")){
+                if(this.form.password===cookie.get('password')){
                   if (this.form.remember) {
-                    cookie.set("password", this.form.password, {expires: 15});
+                    cookie.set('password', this.form.password, {expires: 15});
                   }else{
-                    cookie.remove("password");
+                    cookie.remove('password');
                   }
                 }else{
-                  cookie.remove("password");
+                  cookie.remove('password');
                   this.form.password='';
-                  this.form.error="用户名或密码不正确";
+                  this.form.error='用户名或密码不正确';
                   return;
                 }
               }else{//不是32位说明不是回显的密码,直接加密后台
-                this.form.password=md5(this.form.password);
+                this.form.password=md5(this.form.password).toUpperCase();;
                 if (this.form.remember) {
-                  cookie.set("password", this.form.password, {expires: 15});
+                  cookie.set('password', this.form.password, {expires: 15});
                 }else{
-                  cookie.remove("password");
+                  cookie.remove('password');
                 }
               }
             }
             //登陆后台
-            this.$router.push({
-              name: 'main'
+            util.axios.post('/login',{
+              username:this.form.username,
+              password:this.form.password
+            }).then((resp)=>{
+              console.log(resp);
+              if(util.parse(resp.data,this)){
+                let token=resp.data.data;
+                window.localStorage.setItem(this.form.username,token);
+                this.$router.push({name: 'main'});
+              }else{
+                this.form.error=resp.data.error||'用户名或密码错误';
+                this.form.password='';
+                cookie.remove('password');
+              }
+            }).catch((err)=>{
+              console.log(err);
+              Message.warning('登录失败!');
             });
           }
         });
